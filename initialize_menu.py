@@ -1,32 +1,15 @@
 import firebase_admin
 from firebase_admin import credentials, firestore
-import os
-import json
-from flask import Flask, request, jsonify
-import firebase_admin
-from firebase_admin import credentials, firestore
-import logging
 
-# Initialize Firebase Admin SDK using environment variables
+# Initialize Firebase Admin SDK
 def initialize_firebase():
     try:
-        # Check if running in cloud environment
-        if os.environ.get('FIREBASE_CREDENTIALS'):
-            # Parse credentials from environment variable
-            cred_dict = json.loads(os.environ.get('FIREBASE_CREDENTIALS'))
-            cred = credentials.Certificate(cred_dict)
-        else:
-            # Fallback for local development
-            cred = credentials.Certificate('serviceaccount.json')
-        
+        cred = credentials.Certificate('serviceaccount.json')  # Replace with your service account file
         firebase_admin.initialize_app(cred)
         return firestore.client()
     except Exception as e:
-        logging.error(f"Failed to initialize Firebase: {e}")
+        print(f"Error initializing Firebase: {e}")
         raise
-
-# Initialize Firestore client
-db = initialize_firebase()
 
 # Add menu items to Firestore
 def add_menu_items():

@@ -46,11 +46,11 @@ def webhook():
             raise ValueError("Intent not found in the request.")
 
         # Route based on intent name
-        if intent == "order_item_place":
+        if intent == "order_item_place_yes":
             return handle_place_order(req)
-        elif intent == "order.add":
+        elif intent == "order.add - context: ongoing-order":
             return handle_add_to_order(req)
-        elif intent == "order.remove":
+        elif intent == "order.remove - context: ongoing-order":
             return handle_remove_from_order(req)
         else:
             return jsonify({"fulfillmentText": "I couldn't process that request."})
