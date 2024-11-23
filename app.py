@@ -46,11 +46,7 @@ def webhook():
             raise ValueError("Intent not found in the request.")
 
         # Route based on intent name
-        if intent == "get.menu":
-            return handle_get_menu()
-        elif intent == "order.new":
-            return handle_new_order(req)
-        elif intent == "order_item_place":
+        if intent == "order_item_place":
             return handle_place_order(req)
         elif intent == "order.add":
             return handle_add_to_order(req)
@@ -63,38 +59,10 @@ def webhook():
         logging.error(f"Error handling request: {e}")
         return jsonify({"fulfillmentText": "An error occurred while processing your request."})
 
-# Handlers for each intent
-def handle_get_menu():
-    try:
-        # Fetch menu from Firestore
-        menu_ref = db.collection("menu_prices").get()
-        menu = {item.id: item.to_dict() for item in menu_ref}
-
-        logging.info("Menu fetched successfully.")
-        return jsonify({"fulfillmentText": f"Here's our menu: {json.dumps(menu)}"})
-    except Exception as e:
-        logging.error(f"Error fetching menu: {e}")
-        return jsonify({"fulfillmentText": "Failed to fetch the menu."})
-
-def handle_new_order(req):
-    try:
-        data = req.get('queryResult', {}).get('parameters', {})
-        new_order = {
-            "userId": data.get("userId"),
-            "orderItems": data.get("orderItems", []),
-            "timestamp": firestore.SERVER_TIMESTAMP,
-            "status": "pending"
-        }
-        # Save the new order in Firestore
-        db.collection("orders").add(new_order)
-        logging.info("New order created successfully.")
-        return jsonify({"fulfillmentText": "Your order has been created successfully!"})
-    except Exception as e:
-        logging.error(f"Error creating new order: {e}")
-        return jsonify({"fulfillmentText": "Failed to create your order."})
-
+# Handle placing an order
 def handle_place_order(req):
     try:
+        # Extract order details from Dialogflow request
         data = req.get('queryResult', {}).get('parameters', {})
         menu_items = data.get("orderItems", [])  # [{"item": "Pizza", "quantity": 2}]
         total_amount = 0
@@ -104,7 +72,7 @@ def handle_place_order(req):
         menu_ref = db.collection("menu_prices").get()
         menu_prices = {item.id: item.to_dict().get("price") for item in menu_ref}
 
-        # Calculate total amount and prepare order details
+        # Calculate the total amount and format order details
         for item in menu_items:
             name = item.get("item")
             quantity = int(item.get("quantity", 1))
@@ -114,86 +82,106 @@ def handle_place_order(req):
                 return jsonify({"fulfillmentText": f"Item '{name}' is not available in the menu."})
 
             total_amount += price * quantity
-            order_details.append({"item": name, "quantity": quantity, "price": price})
+            order_details.append({"item": name, "quantity": quantity})
 
-        # Save order to Firestore
-        user_id = data.get("userId")
-        timestamp = datetime.now().isoformat()
-
+        # Create a new order object
         new_order = {
-            "userId": user_id,
+            "orderId": f"order_{int(datetime.utcnow().timestamp())}",  # Unique ID
             "orderItems": order_details,
             "totalAmount": total_amount,
-            "status": "pending",
-            "timestamp": timestamp,
+            "timestamp": datetime.now().isoformat()  # ISO format timestamp
         }
+
+        # Save the order to Firestore
         db.collection("orders").add(new_order)
 
         logging.info(f"Order placed successfully: {new_order}")
         return jsonify({"fulfillmentText": f"Your order has been placed! Total amount: ₹{total_amount}"})
     except Exception as e:
         logging.error(f"Error placing order: {e}")
-        return jsonify({"fulfillmentText": "Failed to place your order."})
+        return jsonify({"fulfillmentText": "Failed to place your order. Please try again later."})
 
-# Add items to an ongoing order
+# Handle adding to an order
 def handle_add_to_order(req):
     try:
-        parameters = req.get('queryResult', {}).get('parameters', {})
-        new_items = parameters.get('orderItems', [])
-        user_id = parameters.get('userId')
+        # Extract ongoing order and additional items
+        data = req.get('queryResult', {}).get('parameters', {})
+        new_items = data.get("orderItems", [])  # New items to be added
+        session_id = req.get('session').split('/')[-1]  # Extract unique session ID
+        order_ref = db.collection("orders").document(session_id)
+        order = order_ref.get()
 
-        # Fetch ongoing order
-        orders_ref = db.collection("orders")
-        ongoing_order_query = orders_ref.where("userId", "==", user_id).where("status", "==", "pending").get()
+        if not order.exists:
+            return jsonify({"fulfillmentText": "No ongoing order found to add items."})
 
-        if not ongoing_order_query:
-            return jsonify({"fulfillmentText": "You don't have any pending orders."})
+        # Fetch the current order and menu prices
+        current_order = order.to_dict()
+        menu_ref = db.collection("menu_prices").get()
+        menu_prices = {item.id: item.to_dict().get("price") for item in menu_ref}
 
-        ongoing_order = ongoing_order_query[0]
-        ongoing_order_data = ongoing_order.to_dict()
-        ongoing_items = ongoing_order_data.get("orderItems", [])
+        # Add new items to the order
+        total_amount = current_order["totalAmount"]
+        updated_items = current_order["orderItems"]
 
-        # Update order items
         for item in new_items:
-            existing_item = next((i for i in ongoing_items if i['item'] == item['item']), None)
-            if existing_item:
-                existing_item['quantity'] += item['quantity']
-            else:
-                ongoing_items.append(item)
+            name = item.get("item")
+            quantity = int(item.get("quantity", 1))
+            price = menu_prices.get(name)
 
-        orders_ref.document(ongoing_order.id).update({"orderItems": ongoing_items})
-        return jsonify({"fulfillmentText": "Items have been added to your order."})
+            if not price:
+                return jsonify({"fulfillmentText": f"Item '{name}' is not available in the menu."})
+
+            total_amount += price * quantity
+            updated_items.append({"item": name, "quantity": quantity})
+
+        # Update the order in Firestore
+        order_ref.update({"orderItems": updated_items, "totalAmount": total_amount})
+        return jsonify({"fulfillmentText": f"Added items to your order. Updated total: ₹{total_amount}"})
     except Exception as e:
         logging.error(f"Error adding items to order: {e}")
-        return jsonify({"fulfillmentText": "Failed to add items to your order."})
+        return jsonify({"fulfillmentText": "Failed to add items to your order. Please try again later."})
 
-# Remove items from an ongoing order
+# Handle removing items from an order
 def handle_remove_from_order(req):
     try:
-        parameters = req.get('queryResult', {}).get('parameters', {})
-        items_to_remove = parameters.get('orderItems', [])
-        user_id = parameters.get('userId')
+        # Extract ongoing order and items to remove
+        data = req.get('queryResult', {}).get('parameters', {})
+        items_to_remove = data.get("orderItems", [])  # Items to be removed
+        session_id = req.get('session').split('/')[-1]  # Extract unique session ID
+        order_ref = db.collection("orders").document(session_id)
+        order = order_ref.get()
 
-        # Fetch ongoing order
-        orders_ref = db.collection("orders")
-        ongoing_order_query = orders_ref.where("userId", "==", user_id).where("status", "==", "pending").get()
+        if not order.exists:
+            return jsonify({"fulfillmentText": "No ongoing order found to remove items."})
 
-        if not ongoing_order_query:
-            return jsonify({"fulfillmentText": "You don't have any pending orders."})
+        # Fetch the current order and menu prices
+        current_order = order.to_dict()
+        menu_ref = db.collection("menu_prices").get()
+        menu_prices = {item.id: item.to_dict().get("price") for item in menu_ref}
 
-        ongoing_order = ongoing_order_query[0]
-        ongoing_order_data = ongoing_order.to_dict()
-        ongoing_items = ongoing_order_data.get("orderItems", [])
+        # Remove specified items from the order
+        total_amount = current_order["totalAmount"]
+        updated_items = current_order["orderItems"]
 
-        # Update order items
         for item in items_to_remove:
-            ongoing_items = [i for i in ongoing_items if i['item'] != item['item']]
+            name = item.get("item")
+            quantity = int(item.get("quantity", 1))
 
-        orders_ref.document(ongoing_order.id).update({"orderItems": ongoing_items})
-        return jsonify({"fulfillmentText": "Items have been removed from your order."})
+            # Check if the item exists in the current order
+            for i, order_item in enumerate(updated_items):
+                if order_item["item"] == name and order_item["quantity"] >= quantity:
+                    updated_items[i]["quantity"] -= quantity
+                    if updated_items[i]["quantity"] == 0:
+                        updated_items.pop(i)
+                    total_amount -= menu_prices[name] * quantity
+                    break
+
+        # Update the order in Firestore
+        order_ref.update({"orderItems": updated_items, "totalAmount": total_amount})
+        return jsonify({"fulfillmentText": f"Removed items from your order. Updated total: ₹{total_amount}"})
     except Exception as e:
         logging.error(f"Error removing items from order: {e}")
-        return jsonify({"fulfillmentText": "Failed to remove items from your order."})
+        return jsonify({"fulfillmentText": "Failed to remove items from your order. Please try again later."})
 
 # Run Flask app
 if __name__ == "__main__":
