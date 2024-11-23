@@ -1,4 +1,5 @@
 import os
+import json
 from flask import Flask, request, jsonify
 import firebase_admin
 from firebase_admin import credentials, firestore
@@ -10,12 +11,26 @@ logging.basicConfig(level=logging.DEBUG)
 # Initialize Flask app
 app = Flask(__name__)
 
-# Initialize Firebase Admin SDK
-cred = credentials.Certificate(r"C:\Aibot\serviceaccount.json")  # Use raw string for Windows path
-firebase_admin.initialize_app(cred)
+# Initialize Firebase Admin SDK using environment variables
+def initialize_firebase():
+    try:
+        # Check if running in cloud environment
+        if os.environ.get('FIREBASE_CREDENTIALS'):
+            # Parse credentials from environment variable
+            cred_dict = json.loads(os.environ.get('FIREBASE_CREDENTIALS'))
+            cred = credentials.Certificate(cred_dict)
+        else:
+            # Fallback for local development
+            cred = credentials.Certificate('serviceaccount.json')
+        
+        firebase_admin.initialize_app(cred)
+        return firestore.client()
+    except Exception as e:
+        logging.error(f"Failed to initialize Firebase: {e}")
+        raise
 
-# Firestore client
-db = firestore.client()
+# Initialize Firestore client
+db = initialize_firebase()
 
 @app.route('/', methods=['POST'])
 def webhook():
@@ -50,7 +65,6 @@ def webhook():
         return jsonify({"fulfillmentText": "An error occurred while processing your request."})
 
 # Handlers for each intent
-
 def handle_new_order(req):
     try:
         data = req.get('queryResult', {}).get('parameters', {})
@@ -132,4 +146,5 @@ def handle_cancel_order(req):
 
 # Run Flask app
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port)
