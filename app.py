@@ -58,7 +58,7 @@ def handle_place_order(req):
         data = req.get('queryResult', {}).get('parameters', {})
         menu_items = data.get("menu_item", [])
         quantities = data.get("quantity", [])
-        
+
         if not menu_items or not isinstance(menu_items, list):
             return jsonify({"fulfillmentText": "No valid menu items provided."})
 
@@ -68,22 +68,27 @@ def handle_place_order(req):
 
         # Fetch menu prices from Firestore
         menu_ref = db.collection("menu_prices").get()
-        menu_prices = {item.id: item.to_dict().get("price") for item in menu_ref}
+        menu_prices = {item.id.strip().lower(): item.to_dict().get("price") for item in menu_ref}
 
-        # Calculate total amount and validate menu items
+        # Process each menu item
         for i, item in enumerate(menu_items):
-            name = item
+            # Normalize item name for matching
+            name = item.strip().lower()
             quantity = int(quantities[i]) if i < len(quantities) else 1
+
+            # Check if item exists in menu
             price = menu_prices.get(name)
-
             if not price:
-                return jsonify({"fulfillmentText": f"Item '{name}' is not available in the menu."})
+                return jsonify({"fulfillmentText": f"Item '{item}' is not available in the menu."})
 
+            # Calculate total amount
             total_amount += price * quantity
-            order_details.append({"item": name, "quantity": quantity})
+            order_details.append({"item": item, "quantity": quantity})  # Store original item name
 
-        # Create a new order in Firestore
+        # Create a unique order ID
         order_id = f"order_{int(datetime.utcnow().timestamp())}"
+
+        # Create the new order
         new_order = {
             "orderId": order_id,
             "orderItems": order_details,
@@ -91,13 +96,20 @@ def handle_place_order(req):
             "timestamp": datetime.now().isoformat()
         }
 
+        # Save the order to Firestore
         db.collection("orders").document(order_id).set(new_order)
 
+        # Log the successful order
         logging.info(f"Order placed successfully: {new_order}")
-        return jsonify({"fulfillmentText": f"Your order has been placed! Total amount: ₹{total_amount}"})
+
+        # Respond with Order ID and Total Amount
+        return jsonify({
+            "fulfillmentText": f"Your order has been placed successfully! Order ID: {order_id}. Total amount: ₹{total_amount}."
+        })
     except Exception as e:
         logging.error(f"Error placing order: {e}")
         return jsonify({"fulfillmentText": "Failed to place your order. Please try again later."})
+
 
 def handle_add_to_order(req):
     try:
