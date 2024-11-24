@@ -46,7 +46,7 @@ def webhook():
             raise ValueError("Intent not found in the request.")
 
         # Route based on intent name
-        if intent == "order_item_place_yes":
+        if intent == "order_item_place":
             return handle_place_order(req)
         elif intent == "order.add - context: ongoing-order":
             return handle_add_to_order(req)
@@ -64,7 +64,7 @@ def handle_place_order(req):
     try:
         # Extract order details from Dialogflow request
         data = req.get('queryResult', {}).get('parameters', {})
-        menu_items = data.get("orderItems", [])  # [{"item": "Pizza", "quantity": 2}]
+        menu_items = data.get("menu_item", [])  # [{"item": "Pizza", "quantity": 2}]
         total_amount = 0
         order_details = []
 
@@ -74,7 +74,7 @@ def handle_place_order(req):
 
         # Calculate the total amount and format order details
         for item in menu_items:
-            name = item.get("item")
+            name = item.get("menu_item")
             quantity = int(item.get("quantity", 1))
             price = menu_prices.get(name)
 
