@@ -385,6 +385,8 @@ def handle_remove_from_order(req):
             name = item.strip().lower()
             quantity = int(quantities[i]) if i < len(quantities) and quantities[i].isdigit() else 1
 
+            logging.debug(f"Attempting to remove {quantity} of {name} from order {order_id}.")
+
             # Find the item in the current order
             order_item = next((oi for oi in updated_items if oi["item"].strip().lower() == name), None)
 
@@ -393,14 +395,20 @@ def handle_remove_from_order(req):
                     # Reduce the quantity or remove item if quantity reaches zero
                     order_item["quantity"] -= quantity
                     total_amount -= menu_prices.get(name, 0) * quantity
+                    logging.debug(f"Item {name} updated with new quantity {order_item['quantity']}.")
                     if order_item["quantity"] == 0:
                         updated_items.remove(order_item)
+                        logging.debug(f"Item {name} removed from the order as its quantity reached zero.")
                 else:
-                    return jsonify({"fulfillmentText": f"Insufficient quantity of '{item}' to remove."})
+                    logging.debug(f"Insufficient quantity of '{item}' to remove. Available: {order_item['quantity']}, Requested: {quantity}.")
+                    return jsonify({"fulfillmentText": f"Insufficient quantity of '{item}' to remove. Available: {order_item['quantity']}."})
             else:
+                logging.debug(f"Item '{item}' not found in the order.")
                 return jsonify({"fulfillmentText": f"Item '{item}' not found in your order."})
 
+        # Update the Firestore database
         order_ref.set({"orderItems": updated_items, "totalAmount": total_amount}, merge=True)
+        logging.debug(f"Order {order_id} successfully updated after removal. New total: ₹{total_amount}.")
         return jsonify({"fulfillmentText": f"Removed items from your order. Updated total: ₹{total_amount}."})
 
     except ValueError as ve:
