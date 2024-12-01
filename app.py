@@ -307,7 +307,7 @@ def handle_add_to_order(req):
         data = req.get('queryResult', {}).get('parameters', {})
         new_items = data.get("menu_item", [])
         quantities = data.get("quantity", [])
-        order_id = data.get("order_id")  # Extract order_id directly
+        order_id = data.get("order_id")
 
         if not order_id:
             return jsonify({"fulfillmentText": "Please provide a valid Order ID to add items."})
@@ -325,22 +325,35 @@ def handle_add_to_order(req):
         menu_ref = db.collection("menu_prices").get()
         menu_prices = {item.id.strip().lower(): item.to_dict().get("price") for item in menu_ref}
 
-        total_amount = current_order["totalAmount"]
-        updated_items = current_order["orderItems"]
+        total_amount = current_order.get("totalAmount", 0)
+        updated_items = current_order.get("orderItems", [])
 
         for i, item in enumerate(new_items):
             name = item.strip().lower()
-            quantity = int(quantities[i]) if i < len(quantities) else 1
+            quantity = int(quantities[i]) if i < len(quantities) and quantities[i].isdigit() else 1
             price = menu_prices.get(name)
 
             if not price:
                 return jsonify({"fulfillmentText": f"Item '{item}' is not available in the menu."})
 
+            # Check if the item already exists in the current order
+            existing_item = next((order_item for order_item in updated_items if order_item["item"].strip().lower() == name), None)
+
+            if existing_item:
+                # If item exists, update the quantity
+                existing_item["quantity"] += quantity
+            else:
+                # If item is new, add to the list
+                updated_items.append({"item": item, "quantity": quantity})
+
             total_amount += price * quantity
-            updated_items.append({"item": item, "quantity": quantity})
 
         order_ref.set({"orderItems": updated_items, "totalAmount": total_amount}, merge=True)
         return jsonify({"fulfillmentText": f"Added items to your order. Updated total: ₹{total_amount}."})
+
+    except ValueError as ve:
+        logging.error(f"Value error while adding items to order: {ve}")
+        return jsonify({"fulfillmentText": "Invalid quantity provided. Please check your input and try again."})
     except Exception as e:
         logging.error(f"Error adding items to order: {e}")
         return jsonify({"fulfillmentText": "Failed to add items to your order. Please try again later."})
@@ -365,23 +378,34 @@ def handle_remove_from_order(req):
         menu_ref = db.collection("menu_prices").get()
         menu_prices = {item.id.strip().lower(): item.to_dict().get("price") for item in menu_ref}
 
-        total_amount = current_order["totalAmount"]
-        updated_items = current_order["orderItems"]
+        total_amount = current_order.get("totalAmount", 0)
+        updated_items = current_order.get("orderItems", [])
 
         for i, item in enumerate(items_to_remove):
             name = item.strip().lower()
-            quantity = int(quantities[i]) if i < len(quantities) else 1
+            quantity = int(quantities[i]) if i < len(quantities) and quantities[i].isdigit() else 1
 
-            for order_item in updated_items:
-                if order_item["item"].strip().lower() == name and order_item["quantity"] >= quantity:
+            # Find the item in the current order
+            order_item = next((oi for oi in updated_items if oi["item"].strip().lower() == name), None)
+
+            if order_item:
+                if order_item["quantity"] >= quantity:
+                    # Reduce the quantity or remove item if quantity reaches zero
                     order_item["quantity"] -= quantity
+                    total_amount -= menu_prices.get(name, 0) * quantity
                     if order_item["quantity"] == 0:
                         updated_items.remove(order_item)
-                    total_amount -= menu_prices[name] * quantity
-                    break
+                else:
+                    return jsonify({"fulfillmentText": f"Insufficient quantity of '{item}' to remove."})
+            else:
+                return jsonify({"fulfillmentText": f"Item '{item}' not found in your order."})
 
         order_ref.set({"orderItems": updated_items, "totalAmount": total_amount}, merge=True)
         return jsonify({"fulfillmentText": f"Removed items from your order. Updated total: ₹{total_amount}."})
+
+    except ValueError as ve:
+        logging.error(f"Value error while removing items from order: {ve}")
+        return jsonify({"fulfillmentText": "Invalid quantity provided. Please check your input and try again."})
     except Exception as e:
         logging.error(f"Error removing items from order: {e}")
         return jsonify({"fulfillmentText": "Failed to remove items from your order. Please try again later."})
