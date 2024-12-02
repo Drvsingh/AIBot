@@ -370,6 +370,14 @@ def handle_remove_from_order(req):
 
         logging.info("Parsed parameters: items_to_remove=%s, quantities=%s, order_id=%s", items_to_remove, quantities, order_id)
 
+        # Flatten nested lists if necessary
+        if isinstance(items_to_remove, list) and any(isinstance(i, list) for i in items_to_remove):
+            items_to_remove = [item for sublist in items_to_remove for item in sublist]
+        if isinstance(quantities, list) and any(isinstance(q, list) for q in quantities):
+            quantities = [q for sublist in quantities for q in sublist]
+
+        logging.info("Validated parameters: items_to_remove=%s, quantities=%s", items_to_remove, quantities)
+
         if not order_id:
             return jsonify({"fulfillmentText": "Order ID is missing. Please provide a valid order ID."})
 
@@ -395,7 +403,7 @@ def handle_remove_from_order(req):
 
         # Remove items from the order
         for i, item in enumerate(items_to_remove):
-            name = item.strip().lower()
+            name = str(item).strip().lower()  # Ensure the item is a string
             quantity_to_remove = int(quantities[i]) if i < len(quantities) else 1
 
             logging.info("Attempting to remove item: %s, quantity: %d", name, quantity_to_remove)
@@ -433,6 +441,7 @@ def handle_remove_from_order(req):
     except Exception as e:
         logging.error("Error removing items from order: %s", e)
         return jsonify({"fulfillmentText": "Failed to remove items from your order. Please try again later."})
+
 
 
 if __name__ == "__main__":
