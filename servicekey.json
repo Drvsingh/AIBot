@@ -1,0 +1,13 @@
+{
+  "type": "service_account",
+  "project_id": "wildflower-cafe",
+  "private_key_id": "b88bc897a015403d8297786739d9cdf390cc1c9a",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQD3TUiulevtGBvz\nC6E0if781lOOBEpZ5WL5tIvbdYCalDimCDY4X+AH4nyAq+cgNqNw26SNLnUUPH/h\nXDGRvIpigZlqWhrv9LBG7FMSp5CcxJb+s3LrHKYmc/UWZmIZpWeD2uaegBB5e45+\nIzg03V0Lu3musskxkQzm7RiKtr5kJpv+LxXfrzsv6Tk89DGon8En/repw9trITmH\n7Wh7NJtrjE+F/cxqJOefFA78i2xLO84oCrj2AlJoRFV1ut7Vd8ghIbytxXtUk+pV\nPgjvaxHQq1D1ExtZHEhC6F58FfDGkoGwb5EvZYN3SxUrOMAxXRwFyLQQvhkT+0Nv\nZWj4vz8NAgMBAAECggEAKiD/00IWBXd4d3CRP06M4kyuwkBH3EWgFVLlCndbd7nt\nZpd6iSMIGr/CHvdp8cptEHJSd3ylFFP0IxOeHCom1v4mAQClmyAvkX17728dSx+Q\na4ZtetEQGvfhFjZN2vmbB1LYu8KsS825KhLc5eCaE8AVzCWH8co4jPRyHFtiVtQJ\nPNZ4S6l1Wbm38rPb7xv2FlSjFeYBa2v8AkBVazLcctzeiK0+sbGe/SwN9DHMVU8D\nn9NYdtDa2WbASiXeDencAviN+KGCk7gwagmLfLG2+whnVxEcq70R0xkjekDwKEH4\nDgpin6szeHPISwj7dEgnOPfUgiKmFBYQeJoDjjo4sQKBgQD/qdxr/yEuR76nU1va\n3YNqFOaQR4VH+vGB9qdQidfyptoaTSshIep1ypABvSlEnaiERIzjS846eUBog3Ty\nyDcHgeb3p4OWn/1cxz8swYkspKiDQHjv4giiFuwr/OQ4fgqvAIKy90JkOm+eR/H6\nrw1Ht5okvfDfocnhDuNVNkereQKBgQD3oJsMyxwT09ZhD/Mahekwzzp4Ye7LuJzI\nyziYbekLMIE+XrJUW0mHPWhE9hr67ZNzX1Mh9cu5gLWJHLxN2jxuj19AlsjUo0gM\ntPFalfqqt9b0Aqr7vXotqQilex1ZR9QLyEFThuqnddUD97wpNptHoM7rjEh6j7Y3\nJoTZHG/3NQKBgAFfiC+MT0FQYVXEvNmQFwSa2CIuQCkC0AlCqeNk2iQTgVhi0bh7\n1iaLz/oyaeZUcnNDav5Nie4GeLIXAqnLKYCA0hzCaZKFiXbWGyDCaVo0CDOsRPoE\n3McCGIKj+RXUl3oZJpqPeWvQZIkVGdee2RNpiQppesG4vLzYt5/disUBAoGBAJr/\nvs3NPO/0Q1ZSI3tQotxYemLr+gsurYTKH8zZz2ufmuatY7aFxYqPl3rDCbRTjV5E\nJsc1EaY1uGvwvrWEixsxRxAo0eC3q9u4TvLCujquBDCMkvYsbhOyoKTkYUSHP2V4\nndtosezMRt/K685oTd4R/DNYhe2hkw8GX1V/BV6ZAoGANiTidEijpiAmjYXOG7g5\nQ+ABGpPV9mlwIUnsE7AGSIHvhedh82VtoPB1a9JY5mrf/FeTrenkQQgi/G9O8On9\nvpJ+o8l4zkEUQajqXoAOVCnzIZj1HSOLkd68nls+O+9n2p2IIyEfLp9RlE636FFc\nwZSM+Zj6AfbkBUjqL35HH3c=\n-----END PRIVATE KEY-----\n",
+  "client_email": "firebase-adminsdk-trpyx@wildflower-cafe.iam.gserviceaccount.com",
+  "client_id": "117018980695535668769",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/firebase-adminsdk-trpyx%40wildflower-cafe.iam.gserviceaccount.com",
+  "universe_domain": "googleapis.com"
+}
