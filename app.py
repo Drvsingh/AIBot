@@ -6,28 +6,25 @@ from firebase_admin import credentials, firestore
 import logging
 from datetime import datetime
 
-# Initialize logging
 logging.basicConfig(level=logging.DEBUG)
 
-# Initialize Flask app
 app = Flask(__name__)
 
-# Initialize Firebase Admin SDK
 def initialize_firebase():
     try:
-        if os.environ.get('FIREBASE_CREDENTIALS'):
-            cred_dict = json.loads(os.environ.get('FIREBASE_CREDENTIALS'))
-            cred = credentials.Certificate(cred_dict)
-        else:
-            cred = credentials.Certificate('servicekey.json')  # Local fallback
-        firebase_admin.initialize_app(cred)
+        service_account_path = "/etc/secrets/servicekey.json"
+
+        if not firebase_admin._apps:
+            cred = credentials.Certificate(service_account_path)
+            firebase_admin.initialize_app(cred)
+
         return firestore.client()
     except Exception as e:
         logging.error(f"Failed to initialize Firebase: {e}")
         raise
 
-# Initialize Firestore client
 db = initialize_firebase()
+
 
 @app.route('/', methods=['POST'])
 def webhook():
