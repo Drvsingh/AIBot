@@ -19,7 +19,7 @@ def initialize_firebase():
             cred_dict = json.loads(os.environ.get('FIREBASE_CREDENTIALS'))
             cred = credentials.Certificate(cred_dict)
         else:
-            cred = credentials.Certificate('serviceaccount.json')  # Local fallback
+            cred = credentials.Certificate('servicekey.json')  # Local fallback
         firebase_admin.initialize_app(cred)
         return firestore.client()
     except Exception as e:
@@ -243,7 +243,8 @@ def handle_remove_from_order(req):
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
-    app.run(host="0.0.0.0", port=port)
+    app.run(host="0.0.0.0", port=port, debug=True)
+
 
 
 """import os
